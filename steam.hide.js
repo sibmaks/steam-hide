@@ -42,6 +42,12 @@ const SteamHider = function () {
             if (classList.contains(settings.cleanUp.injectedClassName)) {
                 return false;
             }
+            // packages are not ignorable
+            const dsPackageId = addedNode.dataset.dsPackageid;
+            if(dsPackageId) {
+                removeNode(addedNode);
+                return false;
+            }
             const dsAppid = addedNode.dataset.dsAppid;
             if(!dsAppid) {
                 removeNode(addedNode);

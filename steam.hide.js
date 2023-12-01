@@ -2,6 +2,11 @@ const SteamHider = function () {
     const settings = {
         injectedClassName: 'HIDE_BUTTON_INJECTED',
         cleanUp: {
+            classesToRemove: [
+                'ds_ignored',
+                'ds_owned',
+                'ds_wishlist'
+            ],
             maxToProcess: 500,
             interval: 500
         }
@@ -21,13 +26,17 @@ const SteamHider = function () {
         }
     };
 
+    const removeNode = function (node) {
+        const parent = node.parentNode;
+        parent.removeChild(node);
+        state.removed++;
+    }
+
     const onItemAdded = function (addedNode) {
         if (addedNode.nodeType === Node.ELEMENT_NODE) {
             const classList = addedNode.classList;
-            if (classList.contains("ds_ignored") || classList.contains("ds_owned") || classList.contains("ds_wishlist")) {
-                const parent = addedNode.parentNode;
-                parent.removeChild(addedNode);
-                state.removed++;
+            if (settings.cleanUp.classesToRemove.some(classToRemove => classList.contains(classToRemove))) {
+                removeNode(addedNode);
                 return true;
             }
             if (classList.contains(settings.cleanUp.injectedClassName)) {
@@ -35,9 +44,7 @@ const SteamHider = function () {
             }
             const dsAppid = addedNode.dataset.dsAppid;
             if(!dsAppid) {
-                const parent = addedNode.parentNode;
-                parent.removeChild(addedNode);
-                state.removed++;
+                removeNode(addedNode);
                 return true;
             }
             addedNode.classList.add(settings.cleanUp.injectedClassName);
@@ -51,15 +58,11 @@ const SteamHider = function () {
             hideButton.onclick = function (e) {
                 e.preventDefault();
                 IgnoreButton(hideButton, dsAppid);
-                const parent = addedNode.parentNode;
-                parent.removeChild(addedNode);
-                state.removed++;
+                removeNode(addedNode);
             };
             addedNode.insertBefore(hideButton, addedNode.children[0]);
         } else {
-            const parent = addedNode.parentNode;
-            parent.removeChild(addedNode);
-            state.removed++;
+            removeNode(addedNode);
         }
         return true;
     }

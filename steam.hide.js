@@ -1,6 +1,7 @@
 const SteamHider = function () {
     const settings = {
         injectedClassName: 'HIDE_BUTTON_INJECTED',
+        logEnabled: false,
         cleanUp: {
             classesToRemove: [
                 'ds_ignored',
@@ -13,7 +14,8 @@ const SteamHider = function () {
     };
 
     const dom = {
-        resultsRows: document.getElementById("search_resultsRows")
+        resultsRows: document.getElementById("search_resultsRows"),
+        globalHeader: document.getElementById("global_header")
     }
 
     const state = {
@@ -44,12 +46,12 @@ const SteamHider = function () {
             }
             // packages are not ignorable
             const dsPackageId = addedNode.dataset.dsPackageid;
-            if(dsPackageId) {
+            if (dsPackageId) {
                 removeNode(addedNode);
                 return false;
             }
             const dsAppid = addedNode.dataset.dsAppid;
-            if(!dsAppid) {
+            if (!dsAppid) {
                 removeNode(addedNode);
                 return true;
             }
@@ -78,11 +80,11 @@ const SteamHider = function () {
         const childNodes = dom.resultsRows.childNodes;
         let processed = 0;
         for (let i = 0; i < childNodes.length && processed < settings.cleanUp.maxToProcess; i++) {
-            if(!state.started) {
+            if (!state.started) {
                 return;
             }
             const child = childNodes[i];
-            if(onItemAdded(child)) {
+            if (onItemAdded(child)) {
                 processed++;
             }
         }
@@ -92,16 +94,18 @@ const SteamHider = function () {
         const removedNodes = state.removed;
         state.removed -= removedNodes;
         state.removedTotal += removedNodes;
+        if(!settings.logEnabled) {
+            return
+        }
         if (removedNodes > 0) {
             console.log(`Removed ${removedNodes} per second, total: ${state.removedTotal}`);
         }
     }
 
-
-    return {
+    const plugin = {
         settings: settings,
         start: function () {
-            if(state.started) {
+            if (state.started) {
                 return;
             }
             dom.resultsRows = document.getElementById("search_resultsRows");
@@ -116,7 +120,7 @@ const SteamHider = function () {
             state.started = true;
         },
         stop: function () {
-            if(!state.started) {
+            if (!state.started) {
                 return;
             }
             state.started = false;
@@ -124,4 +128,25 @@ const SteamHider = function () {
             clearInterval(state.timers.removedNodesLogIntervalId);
         }
     };
+
+    const activationButton = document.createElement("button");
+    activationButton.style.position = "fixed";
+    activationButton.style.top = "32px";
+    activationButton.style.right = "32px";
+    activationButton.style.width = "48px";
+    activationButton.style.height = "24px";
+    activationButton.innerText = "Run";
+    activationButton.onclick = function (e) {
+        if (!state.started) {
+            plugin.start();
+            activationButton.innerText = "Stop";
+        } else {
+            plugin.stop();
+            activationButton.innerText = "Run";
+        }
+    };
+    dom.globalHeader.insertBefore(activationButton, dom.globalHeader.children[0]);
+
+
+    return plugin;
 }();

@@ -15,7 +15,8 @@ const SteamHider = function () {
 
     const dom = {
         resultsRows: document.getElementById("search_resultsRows"),
-        globalHeader: document.getElementById("global_header")
+        globalHeader: document.getElementById("global_header"),
+        removedSpan: null
     }
 
     const state = {
@@ -94,6 +95,7 @@ const SteamHider = function () {
         const removedNodes = state.removed;
         state.removed -= removedNodes;
         state.removedTotal += removedNodes;
+        dom.removedSpan.innerText = state.removedTotal;
         if(!settings.logEnabled) {
             return
         }
@@ -130,6 +132,8 @@ const SteamHider = function () {
     };
 
     const activationButton = document.createElement("button");
+    activationButton.classList.add('btnv6_blue_hoverfade');
+    activationButton.classList.add('btn_small');
     activationButton.style.position = "fixed";
     activationButton.style.top = "32px";
     activationButton.style.right = "32px";
@@ -147,6 +151,13 @@ const SteamHider = function () {
     };
     dom.globalHeader.insertBefore(activationButton, dom.globalHeader.children[0]);
 
-
+    dom.removedSpan = document.createElement("span");
+    dom.removedSpan.style.position = "fixed";
+    dom.removedSpan.style.top = "64px";
+    dom.removedSpan.style.right = "32px";
+    dom.removedSpan.style.fontSize = "x-small";
+    dom.removedSpan.style.userSelect = "none";
+    dom.globalHeader.insertBefore(dom.removedSpan, dom.globalHeader.children[0]);
+    
     return plugin;
 }();

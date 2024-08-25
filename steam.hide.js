@@ -10,6 +10,9 @@ const SteamHider = function () {
             ],
             maxToProcess: 500,
             interval: 500
+        },
+        autoScroll: {
+            interval: 500
         }
     };
 
@@ -25,6 +28,7 @@ const SteamHider = function () {
         started: false,
         timers: {
             cleanUpIntervalId: null,
+            autoScrollIntervalId: null,
             removedNodesLogIntervalId: null
         }
     };
@@ -76,7 +80,6 @@ const SteamHider = function () {
         return true;
     }
 
-
     const cleanUp = function () {
         const childNodes = dom.resultsRows.childNodes;
         let processed = 0;
@@ -89,6 +92,10 @@ const SteamHider = function () {
                 processed++;
             }
         }
+    }
+
+    const autoScroll = function () {
+        InitInfiniteScroll.oController.OnScroll()
     }
 
     const logRemoved = function () {
@@ -117,6 +124,7 @@ const SteamHider = function () {
             }
 
             state.timers.cleanUpIntervalId = setInterval(cleanUp, settings.cleanUp.interval);
+            state.timers.autoScrollIntervalId = setInterval(autoScroll, settings.autoScroll.interval);
             state.timers.removedNodesLogIntervalId = setInterval(logRemoved, 1000);
 
             state.started = true;
@@ -127,6 +135,7 @@ const SteamHider = function () {
             }
             state.started = false;
             clearInterval(state.timers.cleanUpIntervalId);
+            clearInterval(state.timers.autoScrollIntervalId);
             clearInterval(state.timers.removedNodesLogIntervalId);
         }
     };

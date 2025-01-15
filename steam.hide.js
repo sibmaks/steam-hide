@@ -19,7 +19,7 @@ const SteamHider = function () {
     const dom = {
         resultsRows: document.getElementById("search_resultsRows"),
         globalHeader: document.getElementById("global_header"),
-        removedSpan: null
+        removedLabel: null
     }
 
     const state = {
@@ -102,7 +102,7 @@ const SteamHider = function () {
         const removedNodes = state.removed;
         state.removed -= removedNodes;
         state.removedTotal += removedNodes;
-        dom.removedSpan.innerText = state.removedTotal;
+        dom.removedLabel.innerText = state.removedTotal;
         if(!settings.logEnabled) {
             return
         }
@@ -140,12 +140,14 @@ const SteamHider = function () {
         }
     };
 
+    const widgetBlock = document.createElement("div");
+    widgetBlock.style.position = "fixed";
+    widgetBlock.style.top = "32px";
+    widgetBlock.style.right = "32px";
+
     const activationButton = document.createElement("button");
     activationButton.classList.add('btnv6_blue_hoverfade');
     activationButton.classList.add('btn_small');
-    activationButton.style.position = "fixed";
-    activationButton.style.top = "32px";
-    activationButton.style.right = "32px";
     activationButton.style.width = "48px";
     activationButton.style.height = "24px";
     activationButton.innerText = "Run";
@@ -158,15 +160,16 @@ const SteamHider = function () {
             activationButton.innerText = "Run";
         }
     };
-    dom.globalHeader.insertBefore(activationButton, dom.globalHeader.children[0]);
+    widgetBlock.appendChild(activationButton);
 
-    dom.removedSpan = document.createElement("span");
-    dom.removedSpan.style.position = "fixed";
-    dom.removedSpan.style.top = "64px";
-    dom.removedSpan.style.right = "32px";
-    dom.removedSpan.style.fontSize = "x-small";
-    dom.removedSpan.style.userSelect = "none";
-    dom.globalHeader.insertBefore(dom.removedSpan, dom.globalHeader.children[0]);
-    
+    dom.removedLabel = document.createElement("p");
+    dom.removedLabel.style.fontSize = "x-small";
+    dom.removedLabel.style.userSelect = "none";
+    dom.removedLabel.style.margin = "4px";
+    dom.removedLabel.style.textAlign = "center";
+    widgetBlock.appendChild(dom.removedLabel);
+
+    dom.globalHeader.insertBefore(widgetBlock, dom.globalHeader.children[0]);
+
     return plugin;
 }();

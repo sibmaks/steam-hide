@@ -1,4 +1,10 @@
 const SteamHider = function () {
+    if (window.SteamHider) {
+        return;
+    } else {
+        window.SteamHider = this;
+    }
+
     const settings = {
         injectedClassName: 'HIDE_BUTTON_INJECTED',
         logEnabled: false,
@@ -103,7 +109,7 @@ const SteamHider = function () {
         state.removed -= removedNodes;
         state.removedTotal += removedNodes;
         dom.removedLabel.innerText = state.removedTotal;
-        if(!settings.logEnabled) {
+        if (!settings.logEnabled) {
             return
         }
         if (removedNodes > 0) {

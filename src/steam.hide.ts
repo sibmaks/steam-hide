@@ -48,11 +48,13 @@ const SteamHider = function (): SteamHiderPlugin {
 
     const dom: {
         resultsRows: HTMLElement | null;
+        menuBlock: HTMLElement | null;
         globalHeader: HTMLElement | null;
         removedLabel: HTMLParagraphElement | null;
         hideSelectedButton: HTMLButtonElement | null;
     } = {
         resultsRows: document.getElementById("search_resultsRows"),
+        menuBlock: document.querySelector('div.Panel.Focusable[role="navigation"]'),
         globalHeader: document.getElementById("global_header"),
         removedLabel: null,
         hideSelectedButton: null
@@ -257,9 +259,6 @@ const SteamHider = function (): SteamHiderPlugin {
         delay(Math.floor(Math.random() * (max - min + 1)) + min);
 
     const widgetBlock = document.createElement("div");
-    widgetBlock.style.position = "fixed";
-    widgetBlock.style.top = "32px";
-    widgetBlock.style.right = "32px";
     widgetBlock.style.display = "flex";
     widgetBlock.style.alignItems = "center";
     widgetBlock.style.gap = "4px";
@@ -331,7 +330,14 @@ const SteamHider = function (): SteamHiderPlugin {
     dom.removedLabel.style.textAlign = "center";
     widgetBlock.appendChild(dom.removedLabel);
 
-    dom.globalHeader?.insertBefore(widgetBlock, dom.globalHeader.firstChild);
+    if(dom.menuBlock) {
+        dom.menuBlock.appendChild(widgetBlock);
+    } else {
+        widgetBlock.style.position = "fixed";
+        widgetBlock.style.top = "32px";
+        widgetBlock.style.right = "32px";
+        dom.globalHeader?.insertBefore(widgetBlock, dom.globalHeader.firstChild);
+    }
 
     window.SteamHider = plugin;
     return plugin;

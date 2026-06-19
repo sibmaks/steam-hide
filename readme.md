@@ -12,6 +12,9 @@ Simple plugin, which adds more friendly "Hide" controls on the Steam search page
 
 The extension starts automatically on the Steam search page.
 
+Tagged pushes matching `vX.X.X` build the extension on GitHub Actions and publish
+`steam-hider-chrome-vivaldi.zip` to the matching GitHub release.
+
 ## Console usage
 
 1. Copy [steam.hide.js](steam.hide.js) into your console.

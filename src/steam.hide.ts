@@ -62,6 +62,7 @@ const SteamHider = function (): SteamHiderPlugin {
         removed: number;
         removedTotal: number;
         selected: SelectedItem[];
+        hidingSelected: boolean;
         started: boolean;
         lastChecked: SelectButton | null;
         lastCheckedIndex: number | null;
@@ -74,6 +75,7 @@ const SteamHider = function (): SteamHiderPlugin {
         removed: 0,
         removedTotal: 0,
         selected: [],
+        hidingSelected: false,
         started: false,
         lastChecked: null,
         lastCheckedIndex: null,
@@ -96,6 +98,12 @@ const SteamHider = function (): SteamHiderPlugin {
         checkbox.title = checked ? "Unselect row" : "Select row";
     };
 
+    const setSelectionLocked = (locked: boolean): void => {
+        state.hidingSelected = locked;
+        document.querySelectorAll<SelectButton>(`.${settings.checkboxClassName}`)
+            .forEach(checkbox => checkbox.disabled = locked);
+    };
+
     const getIndex = (node: Element): number => {
         let index = 0;
         let el: Element | null = node;
@@ -108,6 +116,8 @@ const SteamHider = function (): SteamHiderPlugin {
     };
 
     const onCheckboxClick = (e: MouseEvent, gameNode: HTMLElement, checkbox: SelectButton): void => {
+        if (state.hidingSelected) return;
+
         const index = getIndex(gameNode);
 
         if (!checkbox.checked) {
@@ -174,6 +184,7 @@ const SteamHider = function (): SteamHiderPlugin {
         checkbox.type = "button";
         checkbox.setAttribute("aria-label", "Select row");
         setCheckboxState(checkbox, false);
+        checkbox.disabled = state.hidingSelected;
         checkbox.onclick = e => {
             e.preventDefault();
             onCheckboxClick(e, item, checkbox);
@@ -261,30 +272,38 @@ const SteamHider = function (): SteamHiderPlugin {
     hideSelectedButton.innerText = "Hide Selected";
     hideSelectedButton.disabled = true;
     hideSelectedButton.onclick = async () => {
+        if (state.hidingSelected) return;
+
         const failed: SelectedItem[] = [];
+        const selected = [...state.selected];
 
-        for (const item of state.selected) {
-            const parent = item.parent;
+        setSelectionLocked(true);
+        hideSelectedButton.disabled = true;
 
-            try {
-                const result = IgnoreButton(item.checkbox, parent.dataset.dsAppid);
+        try {
+            for (const item of selected) {
+                const parent = item.parent;
 
-                if (result instanceof Promise) {
-                    await result;
+                try {
+                    const result = IgnoreButton(item.checkbox, parent.dataset.dsAppid);
+
+                    if (result instanceof Promise) {
+                        await result;
+                    }
+
+                    removeNode(parent);
+
+                    await randomDelay(300, 1200);
+                } catch (err) {
+                    console.error('Ignore failed for', parent.dataset.dsAppid, err);
+                    failed.push(item);
                 }
-
-                removeNode(parent);
-
-                await randomDelay(300, 1200);
-            } catch (err) {
-                console.error('Ignore failed for', parent.dataset.dsAppid, err);
-                failed.push(item);
             }
+        } finally {
+            state.selected = failed;
+            setSelectionLocked(false);
+            hideSelectedButton.disabled = state.selected.length === 0;
         }
-
-        state.selected = failed;
-
-        hideSelectedButton.disabled = state.selected.length === 0;
     };
     widgetBlock.appendChild(hideSelectedButton);
     dom.hideSelectedButton = hideSelectedButton;

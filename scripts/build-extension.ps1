@@ -21,7 +21,7 @@ New-Item -ItemType Directory -Force -Path $packageDir | Out-Null
 New-Item -ItemType Directory -Force -Path (Join-Path $packageDir "icons") | Out-Null
 
 Copy-Item (Join-Path $root "manifest.json") $packageDir
-Copy-Item (Join-Path $root "out/steam.hide.js") $packageDir
+Copy-Item (Join-Path $root "build/steam.hide.js") $packageDir
 Copy-Item (Join-Path $root "steam.hide.css") $packageDir
 Copy-Item (Join-Path $root "extension-autostart.js") $packageDir
 Copy-Item (Join-Path $root "LICENSE") $packageDir

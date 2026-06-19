@@ -8,7 +8,7 @@
     ],
     "strict": true,
     "noEmitOnError": true,
-    "outFile": "out/steam.hide.js"
+    "outFile": "build/steam.hide.js"
   },
   "files": [
     "src/steam.hide.ts"

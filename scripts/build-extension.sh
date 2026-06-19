@@ -14,7 +14,7 @@ rm -f "$zip_path"
 mkdir -p "$package_dir/icons"
 
 cp "$root/manifest.json" "$package_dir/"
-cp "$root/out/steam.hide.js" "$package_dir/"
+cp "$root/build/steam.hide.js" "$package_dir/"
 cp "$root/steam.hide.css" "$package_dir/"
 cp "$root/extension-autostart.js" "$package_dir/"
 cp "$root/LICENSE" "$package_dir/"

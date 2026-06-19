@@ -6,13 +6,16 @@ dist="$root/dist"
 package_dir="$dist/steam-hider"
 zip_path="$dist/steam-hider-chrome-vivaldi.zip"
 
+npm run build:js
+
 rm -rf "$package_dir"
 rm -f "$zip_path"
 
 mkdir -p "$package_dir/icons"
 
 cp "$root/manifest.json" "$package_dir/"
-cp "$root/steam.hide.js" "$package_dir/"
+cp "$root/out/steam.hide.js" "$package_dir/"
+cp "$root/steam.hide.css" "$package_dir/"
 cp "$root/extension-autostart.js" "$package_dir/"
 cp "$root/LICENSE" "$package_dir/"
 cp "$root/readme.md" "$package_dir/"

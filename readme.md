@@ -4,6 +4,7 @@ Simple plugin, which adds more friendly "Hide" controls on the Steam search page
 
 ## Chrome/Vivaldi extension
 
+0. Run `npm install`.
 1. Run `npm run build` on Windows, or `npm run build:linux` on Linux.
 2. Open `chrome://extensions` or `vivaldi://extensions`.
 3. Enable developer mode.
@@ -17,7 +18,8 @@ Tagged pushes matching `vX.X.X` build the extension on GitHub Actions and publis
 
 ## Console usage
 
-1. Copy [steam.hide.js](steam.hide.js) into your console.
+1. Run `npm run build:js`.
+2. Copy [steam.hide.js](steam.hide.js) into your console.
 2. Use `SteamHider.start()` to run hider.
 3. Use `SteamHider.stop()` to shut down hider.
 

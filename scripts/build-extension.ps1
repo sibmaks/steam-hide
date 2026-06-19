@@ -5,6 +5,8 @@ $dist = Join-Path $root "dist"
 $packageDir = Join-Path $dist "steam-hider"
 $zipPath = Join-Path $dist "steam-hider-chrome-vivaldi.zip"
 
+npm run build:js
+
 New-Item -ItemType Directory -Force -Path $dist | Out-Null
 
 if (Test-Path $packageDir) {
@@ -19,7 +21,8 @@ New-Item -ItemType Directory -Force -Path $packageDir | Out-Null
 New-Item -ItemType Directory -Force -Path (Join-Path $packageDir "icons") | Out-Null
 
 Copy-Item (Join-Path $root "manifest.json") $packageDir
-Copy-Item (Join-Path $root "steam.hide.js") $packageDir
+Copy-Item (Join-Path $root "out/steam.hide.js") $packageDir
+Copy-Item (Join-Path $root "steam.hide.css") $packageDir
 Copy-Item (Join-Path $root "extension-autostart.js") $packageDir
 Copy-Item (Join-Path $root "LICENSE") $packageDir
 Copy-Item (Join-Path $root "readme.md") $packageDir

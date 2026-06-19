@@ -1,4 +1,29 @@
-const SteamHider = function () {
+interface SteamHiderPlugin {
+    start(): void;
+    stop(): void;
+}
+
+interface Window {
+    SteamHider?: SteamHiderPlugin;
+}
+
+type SelectButton = HTMLButtonElement & {
+    checked: boolean;
+};
+
+interface SelectedItem {
+    parent: HTMLElement;
+    checkbox: SelectButton;
+}
+
+declare const IgnoreButton: (button: HTMLElement, appId?: string) => void | Promise<void>;
+declare const InitInfiniteScroll: {
+    oController: {
+        OnScroll(): void;
+    };
+};
+
+const SteamHider = function (): SteamHiderPlugin {
     if (window.SteamHider) {
         return window.SteamHider;
     }
@@ -18,20 +43,34 @@ const SteamHider = function () {
         },
         autoScroll: {
             interval: 500
-        },
-        styles: {
-            id: 'steam-hider-styles'
         }
     };
 
-    const dom = {
+    const dom: {
+        resultsRows: HTMLElement | null;
+        globalHeader: HTMLElement | null;
+        removedLabel: HTMLParagraphElement | null;
+        hideSelectedButton: HTMLButtonElement | null;
+    } = {
         resultsRows: document.getElementById("search_resultsRows"),
         globalHeader: document.getElementById("global_header"),
         removedLabel: null,
         hideSelectedButton: null
     };
 
-    const state = {
+    const state: {
+        removed: number;
+        removedTotal: number;
+        selected: SelectedItem[];
+        started: boolean;
+        lastChecked: SelectButton | null;
+        lastCheckedIndex: number | null;
+        timers: {
+            cleanUpIntervalId: number | null;
+            autoScrollIntervalId: number | null;
+            removedNodesLogIntervalId: number | null;
+        };
+    } = {
         removed: 0,
         removedTotal: 0,
         selected: [],
@@ -45,159 +84,99 @@ const SteamHider = function () {
         }
     };
 
-    const removeNode = node => {
+    const removeNode = (node: ChildNode | null): void => {
         node?.parentNode?.removeChild(node);
         state.removed++;
     };
 
-    const ensureStyles = () => {
-        if (document.getElementById(settings.styles.id)) {
-            return;
-        }
-
-        const style = document.createElement('style');
-        style.id = settings.styles.id;
-        style.textContent = `
-            .steam-hider-row-controls {
-                position: absolute;
-                left: -76px;
-                top: 14px;
-                display: flex;
-                align-items: center;
-                gap: 6px;
-                z-index: 5;
-            }
-
-            .steam-hider-icon-button {
-                width: 28px;
-                height: 28px;
-                display: inline-flex;
-                align-items: center;
-                justify-content: center;
-                border: 1px solid rgba(255, 255, 255, 0.18);
-                border-radius: 6px;
-                background: linear-gradient(180deg, #2a475e 0%, #1b2838 100%);
-                color: #c7d5e0;
-                box-shadow: 0 1px 2px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.08);
-                cursor: pointer;
-                font: 700 16px/1 Arial, Helvetica, sans-serif;
-                padding: 0;
-                transition: background 120ms ease, border-color 120ms ease, color 120ms ease, transform 120ms ease;
-            }
-
-            .steam-hider-icon-button:hover {
-                border-color: rgba(102, 192, 244, 0.7);
-                color: #ffffff;
-                background: linear-gradient(180deg, #3b6f8f 0%, #26445d 100%);
-                transform: translateY(-1px);
-            }
-
-            .steam-hider-icon-button:active {
-                transform: translateY(0);
-            }
-
-            .steam-hider-select-button[aria-pressed="true"] {
-                border-color: rgba(164, 208, 7, 0.75);
-                background: linear-gradient(180deg, #87a416 0%, #526d09 100%);
-                color: #ffffff;
-            }
-
-            .steam-hider-hide-button {
-                font-size: 18px;
-            }
-
-            .steam-hider-hide-button:hover {
-                border-color: rgba(255, 118, 118, 0.75);
-                background: linear-gradient(180deg, #7c2f2f 0%, #4b2020 100%);
-            }
-        `;
-        document.head.appendChild(style);
-    };
-
-    const setCheckboxState = (checkbox, checked) => {
+    const setCheckboxState = (checkbox: SelectButton, checked: boolean): void => {
         checkbox.checked = checked;
         checkbox.innerText = checked ? "✓" : "+";
         checkbox.setAttribute("aria-pressed", checked ? "true" : "false");
         checkbox.title = checked ? "Unselect row" : "Select row";
     };
 
-    const getIndex = (node) => {
+    const getIndex = (node: Element): number => {
         let index = 0;
-        let el = node;
+        let el: Element | null = node;
 
         while ((el = el.previousElementSibling) !== null) {
             index++;
         }
 
         return index;
-    }
+    };
 
-    const onCheckboxClick = (e, gameNode, checkbox) => {
-        let index = getIndex(gameNode);
+    const onCheckboxClick = (e: MouseEvent, gameNode: HTMLElement, checkbox: SelectButton): void => {
+        const index = getIndex(gameNode);
 
         if (!checkbox.checked) {
             const last = state.lastCheckedIndex;
-            if (e.shiftKey && last !== null) {
+            if (e.shiftKey && last !== null && gameNode.parentElement) {
                 const begin = last < index ? last : index;
                 const end = begin === last ? index : last;
-                const children = gameNode.parentNode.children;
+                const children = gameNode.parentElement.children;
                 for (let i = begin; i <= end; i++) {
-                    const child = children[i];
-                    const childCheckbox = child.querySelector(`.${settings.checkboxClassName}`);
-                    if (!childCheckbox.checked) {
+                    const child = children[i] as HTMLElement;
+                    const childCheckbox = child.querySelector<SelectButton>(`.${settings.checkboxClassName}`);
+                    if (childCheckbox && !childCheckbox.checked) {
                         setCheckboxState(childCheckbox, true);
-                        state.selected.push({parent: child, checkbox: childCheckbox})
+                        state.selected.push({parent: child, checkbox: childCheckbox});
                     }
                 }
             } else {
                 setCheckboxState(checkbox, true);
-                state.selected.push({parent: gameNode, checkbox: checkbox})
+                state.selected.push({parent: gameNode, checkbox});
             }
         } else {
             setCheckboxState(checkbox, false);
-            state.selected = state.selected.filter(it => it.checkbox !== checkbox)
+            state.selected = state.selected.filter(it => it.checkbox !== checkbox);
         }
 
         state.lastChecked = checkbox;
         state.lastCheckedIndex = index;
-        dom.hideSelectedButton.disabled = state.selected.length === 0;
+        if (dom.hideSelectedButton) {
+            dom.hideSelectedButton.disabled = state.selected.length === 0;
+        }
     };
 
-    const onItemAdded = addedNode => {
+    const onItemAdded = (addedNode: ChildNode): boolean => {
         if (addedNode.nodeType !== Node.ELEMENT_NODE) {
             removeNode(addedNode);
             return true;
         }
-        const classList = addedNode.classList;
+
+        const item = addedNode as HTMLElement;
+        const classList = item.classList;
         if (settings.cleanUp.classesToRemove.some(c => classList.contains(c))) {
-            removeNode(addedNode);
+            removeNode(item);
             return true;
         }
         if (classList.contains(settings.injectedClassName)) return false;
-        if (addedNode.dataset.dsPackageid) {
-            removeNode(addedNode);
+        if (item.dataset.dsPackageid) {
+            removeNode(item);
             return false;
         }
-        if (!addedNode.dataset.dsAppid) {
-            removeNode(addedNode);
+        if (!item.dataset.dsAppid) {
+            removeNode(item);
             return true;
         }
 
-        addedNode.classList.add(settings.injectedClassName);
-        addedNode.style.overflow = "visible";
+        item.classList.add(settings.injectedClassName);
+        item.style.overflow = "visible";
 
         const controlsContainer = document.createElement("div");
         controlsContainer.classList.add("steam-hider-row-controls");
-        addedNode.insertBefore(controlsContainer, addedNode.firstChild);
+        item.insertBefore(controlsContainer, item.firstChild);
 
-        const checkbox = document.createElement("button");
+        const checkbox = document.createElement("button") as SelectButton;
         checkbox.classList.add(settings.checkboxClassName, "steam-hider-icon-button", "steam-hider-select-button");
         checkbox.type = "button";
         checkbox.setAttribute("aria-label", "Select row");
         setCheckboxState(checkbox, false);
         checkbox.onclick = e => {
             e.preventDefault();
-            onCheckboxClick(e, addedNode, checkbox)
+            onCheckboxClick(e, item, checkbox);
         };
         controlsContainer.appendChild(checkbox);
 
@@ -209,14 +188,16 @@ const SteamHider = function () {
         hideButton.innerText = "×";
         hideButton.onclick = e => {
             e.preventDefault();
-            IgnoreButton(hideButton, addedNode.dataset.dsAppid);
-            removeNode(addedNode);
+            IgnoreButton(hideButton, item.dataset.dsAppid);
+            removeNode(item);
         };
         controlsContainer.appendChild(hideButton);
         return true;
     };
 
-    const cleanUp = () => {
+    const cleanUp = (): void => {
+        if (!dom.resultsRows) return;
+
         const childNodes = dom.resultsRows.childNodes;
         let processed = 0;
         for (let i = 0; i < childNodes.length && processed < settings.cleanUp.maxToProcess; i++) {
@@ -226,45 +207,45 @@ const SteamHider = function () {
         }
     };
 
-    const autoScroll = () => InitInfiniteScroll.oController.OnScroll();
+    const autoScroll = (): void => InitInfiniteScroll.oController.OnScroll();
 
-    const logRemoved = () => {
+    const logRemoved = (): void => {
         const removedNodes = state.removed;
         state.removed -= removedNodes;
         state.removedTotal += removedNodes;
-        dom.removedLabel.innerText = state.removedTotal;
+        if (dom.removedLabel) {
+            dom.removedLabel.innerText = String(state.removedTotal);
+        }
         if (settings.logEnabled && removedNodes > 0) {
             console.log(`Removed ${removedNodes} per second, total: ${state.removedTotal}`);
         }
     };
 
-    const plugin = {
+    const plugin: SteamHiderPlugin = {
         start() {
             if (state.started) return;
             dom.resultsRows = document.getElementById("search_resultsRows");
             document.getElementById("client_filter")?.remove();
-            state.timers.cleanUpIntervalId = setInterval(cleanUp, settings.cleanUp.interval);
-            state.timers.autoScrollIntervalId = setInterval(autoScroll, settings.autoScroll.interval);
-            state.timers.removedNodesLogIntervalId = setInterval(logRemoved, 1000);
+            state.timers.cleanUpIntervalId = window.setInterval(cleanUp, settings.cleanUp.interval);
+            state.timers.autoScrollIntervalId = window.setInterval(autoScroll, settings.autoScroll.interval);
+            state.timers.removedNodesLogIntervalId = window.setInterval(logRemoved, 1000);
             state.started = true;
         },
         stop() {
             if (!state.started) return;
             state.started = false;
-            clearInterval(state.timers.cleanUpIntervalId);
-            clearInterval(state.timers.autoScrollIntervalId);
-            clearInterval(state.timers.removedNodesLogIntervalId);
+            if (state.timers.cleanUpIntervalId !== null) clearInterval(state.timers.cleanUpIntervalId);
+            if (state.timers.autoScrollIntervalId !== null) clearInterval(state.timers.autoScrollIntervalId);
+            if (state.timers.removedNodesLogIntervalId !== null) clearInterval(state.timers.removedNodesLogIntervalId);
         }
     };
 
-    const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+    const delay = (ms: number): Promise<void> => new Promise(resolve => setTimeout(resolve, ms));
 
-    const randomDelay = (min = 200, max = 800) =>
+    const randomDelay = (min = 200, max = 800): Promise<void> =>
         delay(Math.floor(Math.random() * (max - min + 1)) + min);
 
-
     const widgetBlock = document.createElement("div");
-    ensureStyles();
     widgetBlock.style.position = "fixed";
     widgetBlock.style.top = "32px";
     widgetBlock.style.right = "32px";
@@ -280,7 +261,7 @@ const SteamHider = function () {
     hideSelectedButton.innerText = "Hide Selected";
     hideSelectedButton.disabled = true;
     hideSelectedButton.onclick = async () => {
-        const failed = [];
+        const failed: SelectedItem[] = [];
 
         for (const item of state.selected) {
             const parent = item.parent;
@@ -303,7 +284,7 @@ const SteamHider = function () {
 
         state.selected = failed;
 
-        dom.hideSelectedButton.disabled = state.selected.length === 0;
+        hideSelectedButton.disabled = state.selected.length === 0;
     };
     widgetBlock.appendChild(hideSelectedButton);
     dom.hideSelectedButton = hideSelectedButton;
@@ -331,7 +312,7 @@ const SteamHider = function () {
     dom.removedLabel.style.textAlign = "center";
     widgetBlock.appendChild(dom.removedLabel);
 
-    dom.globalHeader.insertBefore(widgetBlock, dom.globalHeader.firstChild);
+    dom.globalHeader?.insertBefore(widgetBlock, dom.globalHeader.firstChild);
 
     window.SteamHider = plugin;
     return plugin;

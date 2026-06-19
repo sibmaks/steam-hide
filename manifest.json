@@ -17,6 +17,9 @@
         "steam.hide.js",
         "extension-autostart.js"
       ],
+      "css": [
+        "steam.hide.css"
+      ],
       "run_at": "document_idle",
       "world": "MAIN"
     }

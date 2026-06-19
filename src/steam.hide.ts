@@ -1,4 +1,7 @@
+/// <reference path="./settings.ts" />
+
 interface SteamHiderPlugin {
+    settings: SteamHiderSettings;
     start(): void;
     stop(): void;
 }
@@ -28,27 +31,7 @@ const SteamHider = function (): SteamHiderPlugin {
         return window.SteamHider;
     }
 
-    const settings = {
-        injectedClassName: 'HIDE_BUTTON_INJECTED',
-        checkboxClassName: 'HIDE_CHECKBOX',
-        logEnabled: false,
-        cleanUp: {
-            classesToRemove: [
-                'ds_ignored',
-                'ds_owned',
-                'ds_wishlist'
-            ],
-            maxToProcess: 500,
-            interval: 500
-        },
-        autoScroll: {
-            interval: 500
-        },
-        hideSelected: {
-            minDelay: 300,
-            maxDelay: 1000
-        }
-    };
+    let settings = readSteamHiderSettingsFromPage();
 
     const dom: {
         resultsRows: HTMLElement | null;
@@ -239,6 +222,7 @@ const SteamHider = function (): SteamHiderPlugin {
     };
 
     const plugin: SteamHiderPlugin = {
+        settings,
         start() {
             if (state.started) return;
             dom.resultsRows = document.getElementById("search_resultsRows");
@@ -256,6 +240,16 @@ const SteamHider = function (): SteamHiderPlugin {
             if (state.timers.removedNodesLogIntervalId !== null) clearInterval(state.timers.removedNodesLogIntervalId);
         }
     };
+
+    window.addEventListener(STEAM_HIDER_SETTINGS_UPDATED_EVENT, () => {
+        settings = readSteamHiderSettingsFromPage();
+        plugin.settings = settings;
+
+        if (state.started) {
+            plugin.stop();
+            plugin.start();
+        }
+    });
 
     const delay = (ms: number): Promise<void> => new Promise(resolve => setTimeout(resolve, ms));
 

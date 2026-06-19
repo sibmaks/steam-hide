@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Steam Hider Settings</title>
+    <link rel="stylesheet" href="options.css">
+</head>
+<body>
+<main>
+    <header>
+        <h1>Steam Hider Settings</h1>
+        <p>Configure how Steam Hider cleans search results and runs hide actions.</p>
+    </header>
+
+    <form id="settings-form">
+        <section>
+            <h2>Injection</h2>
+            <label>
+                Injected class name
+                <input name="injectedClassName" type="text" required>
+            </label>
+            <label>
+                Checkbox class name
+                <input name="checkboxClassName" type="text" required>
+            </label>
+            <label class="checkbox-row">
+                <input name="logEnabled" type="checkbox">
+                Enable cleanup logging
+            </label>
+        </section>
+
+        <section>
+            <h2>Cleanup</h2>
+            <label>
+                Classes to remove
+                <textarea name="cleanUpClassesToRemove" rows="5" spellcheck="false"></textarea>
+            </label>
+            <div class="grid">
+                <label>
+                    Max items per cleanup
+                    <input name="cleanUpMaxToProcess" type="number" min="0" step="1" required>
+                </label>
+                <label>
+                    Cleanup interval, ms
+                    <input name="cleanUpInterval" type="number" min="0" step="1" required>
+                </label>
+            </div>
+        </section>
+
+        <section>
+            <h2>Scrolling</h2>
+            <label>
+                Auto-scroll interval, ms
+                <input name="autoScrollInterval" type="number" min="0" step="1" required>
+            </label>
+        </section>
+
+        <section>
+            <h2>Hide Selected</h2>
+            <div class="grid">
+                <label>
+                    Minimum delay, ms
+                    <input name="hideSelectedMinDelay" type="number" min="0" step="1" required>
+                </label>
+                <label>
+                    Maximum delay, ms
+                    <input name="hideSelectedMaxDelay" type="number" min="0" step="1" required>
+                </label>
+            </div>
+        </section>
+
+        <footer>
+            <button type="submit">Save</button>
+            <button id="reset-settings" type="button">Reset</button>
+            <p id="status" role="status" aria-live="polite"></p>
+        </footer>
+    </form>
+</main>
+<script src="options.js"></script>
+</body>
+</html>

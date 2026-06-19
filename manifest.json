@@ -3,6 +3,10 @@
   "name": "Steam Hider",
   "version": "1.0.0",
   "description": "Adds convenient hide controls to the Steam search page.",
+  "permissions": [
+    "storage"
+  ],
+  "options_page": "options.html",
   "icons": {
     "16": "icon-16.png",
     "48": "icon-48.png",
@@ -14,13 +18,22 @@
         "https://store.steampowered.com/search*"
       ],
       "js": [
-        "steam.hide.js"
+        "content.js"
       ],
       "css": [
         "steam.hide.css"
       ],
-      "run_at": "document_idle",
-      "world": "MAIN"
+      "run_at": "document_idle"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "steam.hide.js"
+      ],
+      "matches": [
+        "https://store.steampowered.com/*"
+      ]
     }
   ]
 }

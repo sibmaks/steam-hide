@@ -11,6 +11,7 @@
     "outFile": "build/steam.hide.js"
   },
   "files": [
+    "src/settings.ts",
     "src/steam.hide.ts"
   ]
 }

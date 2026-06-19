@@ -14,8 +14,7 @@
         "https://store.steampowered.com/search*"
       ],
       "js": [
-        "steam.hide.js",
-        "extension-autostart.js"
+        "steam.hide.js"
       ],
       "css": [
         "steam.hide.css"

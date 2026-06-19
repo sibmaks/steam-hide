@@ -43,6 +43,10 @@ const SteamHider = function (): SteamHiderPlugin {
         },
         autoScroll: {
             interval: 500
+        },
+        hideSelected: {
+            minDelay: 300,
+            maxDelay: 1000
         }
     };
 
@@ -280,6 +284,8 @@ const SteamHider = function (): SteamHiderPlugin {
         hideSelectedButton.disabled = true;
 
         try {
+            const minDelay = settings.hideSelected.minDelay
+            const maxDelay = settings.hideSelected.maxDelay
             for (const item of selected) {
                 const parent = item.parent;
 
@@ -292,7 +298,7 @@ const SteamHider = function (): SteamHiderPlugin {
 
                     removeNode(parent);
 
-                    await randomDelay(300, 1200);
+                    await randomDelay(minDelay, maxDelay);
                 } catch (err) {
                     console.error('Ignore failed for', parent.dataset.dsAppid, err);
                     failed.push(item);

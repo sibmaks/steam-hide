@@ -1,12 +1,12 @@
 const SteamHider = function () {
     if (window.SteamHider) {
         return;
-    } else {
-        window.SteamHider = this;
     }
+    window.SteamHider = this;
 
     const settings = {
         injectedClassName: 'HIDE_BUTTON_INJECTED',
+        checkboxClassName: 'HIDE_CHECKBOX',
         logEnabled: false,
         cleanUp: {
             classesToRemove: [
@@ -25,13 +25,17 @@ const SteamHider = function () {
     const dom = {
         resultsRows: document.getElementById("search_resultsRows"),
         globalHeader: document.getElementById("global_header"),
-        removedLabel: null
-    }
+        removedLabel: null,
+        hideSelectedButton: null
+    };
 
     const state = {
         removed: 0,
         removedTotal: 0,
+        selected: [],
         started: false,
+        lastChecked: null,
+        lastCheckedIndex: null,
         timers: {
             cleanUpIntervalId: null,
             autoScrollIntervalId: null,
@@ -39,106 +43,149 @@ const SteamHider = function () {
         }
     };
 
-    const removeNode = function (node) {
-        const parent = node.parentNode;
-        parent.removeChild(node);
+    const removeNode = node => {
+        node?.parentNode?.removeChild(node);
         state.removed++;
-    }
+    };
 
-    const onItemAdded = function (addedNode) {
-        if (addedNode.nodeType === Node.ELEMENT_NODE) {
-            const classList = addedNode.classList;
-            if (settings.cleanUp.classesToRemove.some(classToRemove => classList.contains(classToRemove))) {
-                removeNode(addedNode);
-                return true;
-            }
-            if (classList.contains(settings.cleanUp.injectedClassName)) {
-                return false;
-            }
-            // packages are not ignorable
-            const dsPackageId = addedNode.dataset.dsPackageid;
-            if (dsPackageId) {
-                removeNode(addedNode);
-                return false;
-            }
-            const dsAppid = addedNode.dataset.dsAppid;
-            if (!dsAppid) {
-                removeNode(addedNode);
-                return true;
-            }
-            addedNode.classList.add(settings.cleanUp.injectedClassName);
-            addedNode.style.overflow = "visible";
-            const hideButton = document.createElement("button");
-            hideButton.style.position = "absolute";
-            hideButton.style.left = "-48px";
-            hideButton.style.width = "24px";
-            hideButton.style.height = "24px";
-            hideButton.innerText = "-";
-            hideButton.onclick = function (e) {
-                e.preventDefault();
-                IgnoreButton(hideButton, dsAppid);
-                removeNode(addedNode);
-            };
-            addedNode.insertBefore(hideButton, addedNode.children[0]);
-        } else {
-            removeNode(addedNode);
+    const getIndex = (node) => {
+        let index = 0;
+        let el = node;
+
+        while ((el = el.previousElementSibling) !== null) {
+            index++;
         }
-        return true;
+
+        return index;
     }
 
-    const cleanUp = function () {
+    const onCheckboxClick = (e, gameNode, checkbox) => {
+        console.log(state)
+        let index = getIndex(gameNode);
+
+        if (!checkbox.checked) {
+            const last = state.lastCheckedIndex;
+            if (e.shiftKey && last !== null) {
+                const begin = last < index ? last : index;
+                const end = begin === last ? index : last;
+                const children = gameNode.parentNode.children;
+                for (let i = begin; i <= end; i++) {
+                    const child = children[i];
+                    const childCheckbox = child.querySelector(`.${settings.checkboxClassName}`);
+                    if (!childCheckbox.checked) {
+                        childCheckbox.checked = true;
+                        childCheckbox.innerText = "[+]";
+                        state.selected.push({parent: child, checkbox: childCheckbox})
+                    }
+                }
+            } else {
+                checkbox.checked = true;
+                checkbox.innerText = "[+]";
+                state.selected.push({parent: gameNode, checkbox: checkbox})
+            }
+        } else {
+            checkbox.checked = false;
+            checkbox.innerText = "[]";
+            state.selected = state.selected.filter(it => it.checkbox !== checkbox)
+        }
+
+        state.lastChecked = checkbox;
+        state.lastCheckedIndex = index;
+        dom.hideSelectedButton.disabled = state.selected.length === 0;
+        console.log(state)
+    };
+
+    const onItemAdded = addedNode => {
+        if (addedNode.nodeType !== Node.ELEMENT_NODE) {
+            removeNode(addedNode);
+            return true;
+        }
+        const classList = addedNode.classList;
+        if (settings.cleanUp.classesToRemove.some(c => classList.contains(c))) {
+            removeNode(addedNode);
+            return true;
+        }
+        if (classList.contains(settings.injectedClassName)) return false;
+        if (addedNode.dataset.dsPackageid) {
+            removeNode(addedNode);
+            return false;
+        }
+        if (!addedNode.dataset.dsAppid) {
+            removeNode(addedNode);
+            return true;
+        }
+
+        addedNode.classList.add(settings.injectedClassName);
+        addedNode.style.overflow = "visible";
+
+        const controlsContainer = document.createElement("div");
+        controlsContainer.style.position = "absolute";
+        controlsContainer.style.left = "-68px";
+        controlsContainer.style.top = "16px";
+        controlsContainer.style.display = "flex";
+        controlsContainer.style.alignItems = "center";
+        controlsContainer.style.gap = "4px";
+        addedNode.insertBefore(controlsContainer, addedNode.firstChild);
+
+        const checkbox = document.createElement("button");
+        checkbox.classList.add(settings.checkboxClassName);
+        checkbox.style.width = "24px";
+        checkbox.style.height = "24px";
+        checkbox.innerText = "[]";
+        checkbox.checked = false;
+        checkbox.onclick = e => {
+            e.preventDefault();
+            onCheckboxClick(e, addedNode, checkbox)
+        };
+        controlsContainer.appendChild(checkbox);
+
+        const hideButton = document.createElement("button");
+        hideButton.style.width = "24px";
+        hideButton.style.height = "24px";
+        hideButton.innerText = "-";
+        hideButton.onclick = e => {
+            e.preventDefault();
+            IgnoreButton(hideButton, addedNode.dataset.dsAppid);
+            removeNode(addedNode);
+        };
+        controlsContainer.appendChild(hideButton);
+        return true;
+    };
+
+    const cleanUp = () => {
         const childNodes = dom.resultsRows.childNodes;
         let processed = 0;
         for (let i = 0; i < childNodes.length && processed < settings.cleanUp.maxToProcess; i++) {
-            if (!state.started) {
-                return;
-            }
+            if (!state.started) return;
             const child = childNodes[i];
-            if (onItemAdded(child)) {
-                processed++;
-            }
+            if (onItemAdded(child)) processed++;
         }
-    }
+    };
 
-    const autoScroll = function () {
-        InitInfiniteScroll.oController.OnScroll()
-    }
+    const autoScroll = () => InitInfiniteScroll.oController.OnScroll();
 
-    const logRemoved = function () {
+    const logRemoved = () => {
         const removedNodes = state.removed;
         state.removed -= removedNodes;
         state.removedTotal += removedNodes;
         dom.removedLabel.innerText = state.removedTotal;
-        if (!settings.logEnabled) {
-            return
-        }
-        if (removedNodes > 0) {
+        if (settings.logEnabled && removedNodes > 0) {
             console.log(`Removed ${removedNodes} per second, total: ${state.removedTotal}`);
         }
-    }
+    };
 
     const plugin = {
-        settings: settings,
-        start: function () {
-            if (state.started) {
-                return;
-            }
+        start() {
+            if (state.started) return;
             dom.resultsRows = document.getElementById("search_resultsRows");
-            const clientFilter = document.getElementById("client_filter");
-            if (clientFilter) {
-                clientFilter.parentNode.removeChild(clientFilter);
-            }
-
+            document.getElementById("client_filter")?.remove();
             state.timers.cleanUpIntervalId = setInterval(cleanUp, settings.cleanUp.interval);
             state.timers.autoScrollIntervalId = setInterval(autoScroll, settings.autoScroll.interval);
             state.timers.removedNodesLogIntervalId = setInterval(logRemoved, 1000);
-
             state.started = true;
         },
-        stop: function () {
-            if (!state.started) {
-                return;
-            }
+        stop() {
+            if (!state.started) return;
             state.started = false;
             clearInterval(state.timers.cleanUpIntervalId);
             clearInterval(state.timers.autoScrollIntervalId);
@@ -146,18 +193,62 @@ const SteamHider = function () {
         }
     };
 
+    const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+    const randomDelay = (min = 200, max = 800) =>
+        delay(Math.floor(Math.random() * (max - min + 1)) + min);
+
+
     const widgetBlock = document.createElement("div");
     widgetBlock.style.position = "fixed";
     widgetBlock.style.top = "32px";
     widgetBlock.style.right = "32px";
+    widgetBlock.style.display = "flex";
+    widgetBlock.style.alignItems = "center";
+    widgetBlock.style.gap = "4px";
+    widgetBlock.style.zIndex = "1000";
+
+    const hideSelectedButton = document.createElement("button");
+    hideSelectedButton.classList.add('btnv6_blue_hoverfade', 'btn_small');
+    hideSelectedButton.style.width = "100px";
+    hideSelectedButton.style.height = "24px";
+    hideSelectedButton.innerText = "Hide Selected";
+    hideSelectedButton.disabled = true;
+    hideSelectedButton.onclick = async () => {
+        const failed = [];
+
+        for (const item of state.selected) {
+            const parent = item.parent;
+
+            try {
+                const result = IgnoreButton(item.checkbox, parent.dataset.dsAppid);
+
+                if (result instanceof Promise) {
+                    await result;
+                }
+
+                removeNode(parent);
+
+                await randomDelay(300, 1200);
+            } catch (err) {
+                console.error('Ignore failed for', parent.dataset.dsAppid, err);
+                failed.push(item);
+            }
+        }
+
+        state.selected = failed;
+
+        dom.hideSelectedButton.disabled = state.selected.length === 0;
+    };
+    widgetBlock.appendChild(hideSelectedButton);
+    dom.hideSelectedButton = hideSelectedButton;
 
     const activationButton = document.createElement("button");
-    activationButton.classList.add('btnv6_blue_hoverfade');
-    activationButton.classList.add('btn_small');
+    activationButton.classList.add('btnv6_blue_hoverfade', 'btn_small');
     activationButton.style.width = "48px";
     activationButton.style.height = "24px";
     activationButton.innerText = "Run";
-    activationButton.onclick = function (e) {
+    activationButton.onclick = () => {
         if (!state.started) {
             plugin.start();
             activationButton.innerText = "Stop";
@@ -175,7 +266,7 @@ const SteamHider = function () {
     dom.removedLabel.style.textAlign = "center";
     widgetBlock.appendChild(dom.removedLabel);
 
-    dom.globalHeader.insertBefore(widgetBlock, dom.globalHeader.children[0]);
+    dom.globalHeader.insertBefore(widgetBlock, dom.globalHeader.firstChild);
 
     return plugin;
 }();

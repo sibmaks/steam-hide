@@ -18,6 +18,9 @@ const SteamHider = function () {
         },
         autoScroll: {
             interval: 500
+        },
+        styles: {
+            id: 'steam-hider-styles'
         }
     };
 
@@ -47,6 +50,77 @@ const SteamHider = function () {
         state.removed++;
     };
 
+    const ensureStyles = () => {
+        if (document.getElementById(settings.styles.id)) {
+            return;
+        }
+
+        const style = document.createElement('style');
+        style.id = settings.styles.id;
+        style.textContent = `
+            .steam-hider-row-controls {
+                position: absolute;
+                left: -76px;
+                top: 14px;
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                z-index: 5;
+            }
+
+            .steam-hider-icon-button {
+                width: 28px;
+                height: 28px;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                border: 1px solid rgba(255, 255, 255, 0.18);
+                border-radius: 6px;
+                background: linear-gradient(180deg, #2a475e 0%, #1b2838 100%);
+                color: #c7d5e0;
+                box-shadow: 0 1px 2px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+                cursor: pointer;
+                font: 700 16px/1 Arial, Helvetica, sans-serif;
+                padding: 0;
+                transition: background 120ms ease, border-color 120ms ease, color 120ms ease, transform 120ms ease;
+            }
+
+            .steam-hider-icon-button:hover {
+                border-color: rgba(102, 192, 244, 0.7);
+                color: #ffffff;
+                background: linear-gradient(180deg, #3b6f8f 0%, #26445d 100%);
+                transform: translateY(-1px);
+            }
+
+            .steam-hider-icon-button:active {
+                transform: translateY(0);
+            }
+
+            .steam-hider-select-button[aria-pressed="true"] {
+                border-color: rgba(164, 208, 7, 0.75);
+                background: linear-gradient(180deg, #87a416 0%, #526d09 100%);
+                color: #ffffff;
+            }
+
+            .steam-hider-hide-button {
+                font-size: 18px;
+            }
+
+            .steam-hider-hide-button:hover {
+                border-color: rgba(255, 118, 118, 0.75);
+                background: linear-gradient(180deg, #7c2f2f 0%, #4b2020 100%);
+            }
+        `;
+        document.head.appendChild(style);
+    };
+
+    const setCheckboxState = (checkbox, checked) => {
+        checkbox.checked = checked;
+        checkbox.innerText = checked ? "✓" : "+";
+        checkbox.setAttribute("aria-pressed", checked ? "true" : "false");
+        checkbox.title = checked ? "Unselect row" : "Select row";
+    };
+
     const getIndex = (node) => {
         let index = 0;
         let el = node;
@@ -59,7 +133,6 @@ const SteamHider = function () {
     }
 
     const onCheckboxClick = (e, gameNode, checkbox) => {
-        console.log(state)
         let index = getIndex(gameNode);
 
         if (!checkbox.checked) {
@@ -72,26 +145,22 @@ const SteamHider = function () {
                     const child = children[i];
                     const childCheckbox = child.querySelector(`.${settings.checkboxClassName}`);
                     if (!childCheckbox.checked) {
-                        childCheckbox.checked = true;
-                        childCheckbox.innerText = "[+]";
+                        setCheckboxState(childCheckbox, true);
                         state.selected.push({parent: child, checkbox: childCheckbox})
                     }
                 }
             } else {
-                checkbox.checked = true;
-                checkbox.innerText = "[+]";
+                setCheckboxState(checkbox, true);
                 state.selected.push({parent: gameNode, checkbox: checkbox})
             }
         } else {
-            checkbox.checked = false;
-            checkbox.innerText = "[]";
+            setCheckboxState(checkbox, false);
             state.selected = state.selected.filter(it => it.checkbox !== checkbox)
         }
 
         state.lastChecked = checkbox;
         state.lastCheckedIndex = index;
         dom.hideSelectedButton.disabled = state.selected.length === 0;
-        console.log(state)
     };
 
     const onItemAdded = addedNode => {
@@ -118,20 +187,14 @@ const SteamHider = function () {
         addedNode.style.overflow = "visible";
 
         const controlsContainer = document.createElement("div");
-        controlsContainer.style.position = "absolute";
-        controlsContainer.style.left = "-68px";
-        controlsContainer.style.top = "16px";
-        controlsContainer.style.display = "flex";
-        controlsContainer.style.alignItems = "center";
-        controlsContainer.style.gap = "4px";
+        controlsContainer.classList.add("steam-hider-row-controls");
         addedNode.insertBefore(controlsContainer, addedNode.firstChild);
 
         const checkbox = document.createElement("button");
-        checkbox.classList.add(settings.checkboxClassName);
-        checkbox.style.width = "24px";
-        checkbox.style.height = "24px";
-        checkbox.innerText = "[]";
-        checkbox.checked = false;
+        checkbox.classList.add(settings.checkboxClassName, "steam-hider-icon-button", "steam-hider-select-button");
+        checkbox.type = "button";
+        checkbox.setAttribute("aria-label", "Select row");
+        setCheckboxState(checkbox, false);
         checkbox.onclick = e => {
             e.preventDefault();
             onCheckboxClick(e, addedNode, checkbox)
@@ -139,9 +202,11 @@ const SteamHider = function () {
         controlsContainer.appendChild(checkbox);
 
         const hideButton = document.createElement("button");
-        hideButton.style.width = "24px";
-        hideButton.style.height = "24px";
-        hideButton.innerText = "-";
+        hideButton.classList.add("steam-hider-icon-button", "steam-hider-hide-button");
+        hideButton.type = "button";
+        hideButton.setAttribute("aria-label", "Hide row");
+        hideButton.title = "Hide row";
+        hideButton.innerText = "×";
         hideButton.onclick = e => {
             e.preventDefault();
             IgnoreButton(hideButton, addedNode.dataset.dsAppid);
@@ -199,6 +264,7 @@ const SteamHider = function () {
 
 
     const widgetBlock = document.createElement("div");
+    ensureStyles();
     widgetBlock.style.position = "fixed";
     widgetBlock.style.top = "32px";
     widgetBlock.style.right = "32px";

@@ -4,6 +4,7 @@
   "private": true,
   "description": "Chrome/Vivaldi extension for hiding items on the Steam search page.",
   "scripts": {
-    "build": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-extension.ps1"
+    "build:win": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-extension.ps1",
+    "build:linux": "bash scripts/build-extension.sh"
   }
 }

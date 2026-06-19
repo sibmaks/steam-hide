@@ -4,7 +4,7 @@ Simple plugin, which adds more friendly "Hide" controls on the Steam search page
 
 ## Chrome/Vivaldi extension
 
-1. Run `npm run build`.
+1. Run `npm run build` on Windows, or `npm run build:linux` on Linux.
 2. Open `chrome://extensions` or `vivaldi://extensions`.
 3. Enable developer mode.
 4. Load unpacked extension from `dist/steam-hider`, or use `dist/steam-hider-chrome-vivaldi.zip`.

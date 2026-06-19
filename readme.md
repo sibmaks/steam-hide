@@ -1,8 +1,18 @@
 # SteamHider
 
-Simple plugin, which add more friendly "Hide" button on steam search page.
+Simple plugin, which adds more friendly "Hide" controls on the Steam search page.
 
-## How it works
+## Chrome/Vivaldi extension
+
+1. Run `npm run build`.
+2. Open `chrome://extensions` or `vivaldi://extensions`.
+3. Enable developer mode.
+4. Load unpacked extension from `dist/steam-hider`, or use `dist/steam-hider-chrome-vivaldi.zip`.
+5. Open `https://store.steampowered.com/search`.
+
+The extension starts automatically on the Steam search page.
+
+## Console usage
 
 1. Copy [steam.hide.js](steam.hide.js) into your console.
 2. Use `SteamHider.start()` to run hider.
@@ -14,6 +24,3 @@ supported properties:
 * `maxToProcess` - maximum amount of items that will be proceeds on each clean up iteration. 
 * `interval` - clean up interval in ms. 
 
-## To do
-
-Make a Chrome plugin to more convenient usage.

@@ -1,0 +1,24 @@
+{
+  "manifest_version": 3,
+  "name": "Steam Hider",
+  "version": "1.0.0",
+  "description": "Adds convenient hide controls to the Steam search page.",
+  "icons": {
+    "16": "icon-16.png",
+    "48": "icon-48.png",
+    "128": "icon-128.png"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://store.steampowered.com/search*"
+      ],
+      "js": [
+        "steam.hide.js",
+        "extension-autostart.js"
+      ],
+      "run_at": "document_idle",
+      "world": "MAIN"
+    }
+  ]
+}

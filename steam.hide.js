@@ -1,8 +1,7 @@
 const SteamHider = function () {
     if (window.SteamHider) {
-        return;
+        return window.SteamHider;
     }
-    window.SteamHider = this;
 
     const settings = {
         injectedClassName: 'HIDE_BUTTON_INJECTED',
@@ -268,5 +267,6 @@ const SteamHider = function () {
 
     dom.globalHeader.insertBefore(widgetBlock, dom.globalHeader.firstChild);
 
+    window.SteamHider = plugin;
     return plugin;
 }();

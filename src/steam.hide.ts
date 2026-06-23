@@ -52,6 +52,7 @@ const SteamHider = function (): SteamHiderPlugin {
         removedTotal: number;
         selected: SelectedItem[];
         hidingSelected: boolean;
+        hideSelectedCancelRequested: boolean;
         started: boolean;
         lastChecked: SelectButton | null;
         lastCheckedIndex: number | null;
@@ -65,6 +66,7 @@ const SteamHider = function (): SteamHiderPlugin {
         removedTotal: 0,
         selected: [],
         hidingSelected: false,
+        hideSelectedCancelRequested: false,
         started: false,
         lastChecked: null,
         lastCheckedIndex: null,
@@ -87,10 +89,20 @@ const SteamHider = function (): SteamHiderPlugin {
         checkbox.title = checked ? "Unselect row" : "Select row";
     };
 
+    const updateHideSelectedButton = (): void => {
+        if (!dom.hideSelectedButton) return;
+
+        dom.hideSelectedButton.innerText = state.hidingSelected ? "Cancel" : "Hide";
+        dom.hideSelectedButton.disabled = state.hidingSelected
+            ? state.hideSelectedCancelRequested
+            : state.selected.length === 0;
+    };
+
     const setSelectionLocked = (locked: boolean): void => {
         state.hidingSelected = locked;
         document.querySelectorAll<SelectButton>(`.${settings.checkboxClassName}`)
             .forEach(checkbox => checkbox.disabled = locked);
+        updateHideSelectedButton();
     };
 
     const getIndex = (node: Element): number => {
@@ -134,9 +146,7 @@ const SteamHider = function (): SteamHiderPlugin {
 
         state.lastChecked = checkbox;
         state.lastCheckedIndex = index;
-        if (dom.hideSelectedButton) {
-            dom.hideSelectedButton.disabled = state.selected.length === 0;
-        }
+        updateHideSelectedButton();
     };
 
     const onItemAdded = (addedNode: ChildNode): boolean => {
@@ -253,8 +263,16 @@ const SteamHider = function (): SteamHiderPlugin {
 
     const delay = (ms: number): Promise<void> => new Promise(resolve => setTimeout(resolve, ms));
 
-    const randomDelay = (min = 200, max = 800): Promise<void> =>
-        delay(Math.floor(Math.random() * (max - min + 1)) + min);
+    const randomDelay = async (min = 200, max = 800): Promise<void> => {
+        const startedAt = Date.now();
+        const duration = Math.floor(Math.random() * (max - min + 1)) + min;
+
+        while (!state.hideSelectedCancelRequested) {
+            const remaining = startedAt + duration - Date.now();
+            if (remaining <= 0) return;
+            await delay(Math.min(remaining, 100));
+        }
+    };
 
     const widgetBlock = document.createElement("div");
     widgetBlock.style.display = "flex";
@@ -264,23 +282,33 @@ const SteamHider = function (): SteamHiderPlugin {
 
     const hideSelectedButton = document.createElement("button");
     hideSelectedButton.classList.add('btnv6_blue_hoverfade', 'btn_small');
-    hideSelectedButton.style.width = "100px";
+    hideSelectedButton.style.width = "64px";
     hideSelectedButton.style.height = "24px";
-    hideSelectedButton.innerText = "Hide Selected";
     hideSelectedButton.disabled = true;
     hideSelectedButton.onclick = async () => {
-        if (state.hidingSelected) return;
+        if (state.hidingSelected) {
+            state.hideSelectedCancelRequested = true;
+            updateHideSelectedButton();
+            return;
+        }
 
         const failed: SelectedItem[] = [];
+        const pending: SelectedItem[] = [];
         const selected = [...state.selected];
 
+        state.hideSelectedCancelRequested = false;
         setSelectionLocked(true);
-        hideSelectedButton.disabled = true;
 
         try {
-            const minDelay = settings.hideSelected.minDelay
-            const maxDelay = settings.hideSelected.maxDelay
-            for (const item of selected) {
+            const minDelay = settings.hideSelected.minDelay;
+            const maxDelay = settings.hideSelected.maxDelay;
+            for (let i = 0; i < selected.length; i++) {
+                if (state.hideSelectedCancelRequested) {
+                    pending.push(...selected.slice(i));
+                    break;
+                }
+
+                const item = selected[i];
                 const parent = item.parent;
 
                 try {
@@ -299,13 +327,14 @@ const SteamHider = function (): SteamHiderPlugin {
                 }
             }
         } finally {
-            state.selected = failed;
+            state.selected = [...failed, ...pending];
+            state.hideSelectedCancelRequested = false;
             setSelectionLocked(false);
-            hideSelectedButton.disabled = state.selected.length === 0;
         }
     };
     widgetBlock.appendChild(hideSelectedButton);
     dom.hideSelectedButton = hideSelectedButton;
+    updateHideSelectedButton();
 
     const activationButton = document.createElement("button");
     activationButton.classList.add('btnv6_blue_hoverfade', 'btn_small');

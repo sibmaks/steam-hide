@@ -39,12 +39,14 @@ const SteamHider = function (): SteamHiderPlugin {
         globalHeader: HTMLElement | null;
         removedLabel: HTMLParagraphElement | null;
         hideSelectedButton: HTMLButtonElement | null;
+        activationButton: HTMLButtonElement | null;
     } = {
         resultsRows: document.getElementById("search_resultsRows"),
         menuBlock: document.querySelector('div.Panel.Focusable[role="navigation"]'),
         globalHeader: document.getElementById("global_header"),
         removedLabel: null,
-        hideSelectedButton: null
+        hideSelectedButton: null,
+        activationButton: null
     };
 
     const state: {
@@ -80,6 +82,14 @@ const SteamHider = function (): SteamHiderPlugin {
     const removeNode = (node: ChildNode | null): void => {
         node?.parentNode?.removeChild(node);
         state.removed++;
+    };
+
+    const updateActivationButton = (): void => {
+        if (!dom.activationButton) return;
+
+        dom.activationButton.innerText = state.started ? "■" : "▶";
+        dom.activationButton.setAttribute("aria-label", state.started ? "Stop hider" : "Run hider");
+        dom.activationButton.title = state.started ? "Stop hider" : "Run hider";
     };
 
     const setCheckboxState = (checkbox: SelectButton, checked: boolean): void => {
@@ -205,10 +215,28 @@ const SteamHider = function (): SteamHiderPlugin {
         return true;
     };
 
-    const cleanUp = (): void => {
-        if (!dom.resultsRows) return;
+    const resultsRowsRecreatedOrRemoved = (): boolean => {
+        const currentResultsRows = document.getElementById("search_resultsRows");
+        return !dom.resultsRows || !dom.resultsRows.isConnected || currentResultsRows !== dom.resultsRows;
+    };
 
-        const childNodes = dom.resultsRows.childNodes;
+    const stopIfResultsRowsUnavailable = (): boolean => {
+        if (!resultsRowsRecreatedOrRemoved()) return false;
+
+        if (settings.logEnabled) {
+            console.log("Stopped Steam Hider because search_resultsRows was removed or recreated.");
+        }
+        plugin.stop();
+        return true;
+    };
+
+    const cleanUp = (): void => {
+        if (stopIfResultsRowsUnavailable()) return;
+
+        const resultsRows = dom.resultsRows;
+        if (!resultsRows) return;
+
+        const childNodes = resultsRows.childNodes;
         let processed = 0;
         for (let i = 0; i < childNodes.length && processed < settings.cleanUp.maxToProcess; i++) {
             if (!state.started) return;
@@ -217,7 +245,11 @@ const SteamHider = function (): SteamHiderPlugin {
         }
     };
 
-    const autoScroll = (): void => InitInfiniteScroll.oController.OnScroll();
+    const autoScroll = (): void => {
+        if (stopIfResultsRowsUnavailable()) return;
+
+        InitInfiniteScroll.oController.OnScroll();
+    };
 
     const logRemoved = (): void => {
         const removedNodes = state.removed;
@@ -236,11 +268,13 @@ const SteamHider = function (): SteamHiderPlugin {
         start() {
             if (state.started) return;
             dom.resultsRows = document.getElementById("search_resultsRows");
+            if (!dom.resultsRows) return;
             document.getElementById("client_filter")?.remove();
+            state.started = true;
             state.timers.cleanUpIntervalId = window.setInterval(cleanUp, settings.cleanUp.interval);
             state.timers.autoScrollIntervalId = window.setInterval(autoScroll, settings.autoScroll.interval);
             state.timers.removedNodesLogIntervalId = window.setInterval(logRemoved, 1000);
-            state.started = true;
+            updateActivationButton();
         },
         stop() {
             if (!state.started) return;
@@ -248,6 +282,10 @@ const SteamHider = function (): SteamHiderPlugin {
             if (state.timers.cleanUpIntervalId !== null) clearInterval(state.timers.cleanUpIntervalId);
             if (state.timers.autoScrollIntervalId !== null) clearInterval(state.timers.autoScrollIntervalId);
             if (state.timers.removedNodesLogIntervalId !== null) clearInterval(state.timers.removedNodesLogIntervalId);
+            state.timers.cleanUpIntervalId = null;
+            state.timers.autoScrollIntervalId = null;
+            state.timers.removedNodesLogIntervalId = null;
+            updateActivationButton();
         }
     };
 
@@ -338,18 +376,17 @@ const SteamHider = function (): SteamHiderPlugin {
 
     const activationButton = document.createElement("button");
     activationButton.classList.add('btnv6_blue_hoverfade', 'btn_small');
-    activationButton.style.width = "48px";
+    activationButton.style.width = "32px";
     activationButton.style.height = "24px";
-    activationButton.innerText = "Run";
     activationButton.onclick = () => {
         if (!state.started) {
             plugin.start();
-            activationButton.innerText = "Stop";
         } else {
             plugin.stop();
-            activationButton.innerText = "Run";
         }
     };
+    dom.activationButton = activationButton;
+    updateActivationButton();
     widgetBlock.appendChild(activationButton);
 
     dom.removedLabel = document.createElement("p");

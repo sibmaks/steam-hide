@@ -21,7 +21,6 @@ cp "$root/steam.hide.css" "$package_dir/"
 cp "$root/options.html" "$package_dir/"
 cp "$root/options.css" "$package_dir/"
 cp "$root/LICENSE" "$package_dir/"
-cp "$root/readme.md" "$package_dir/"
 cp "$root"/icons/*.png "$package_dir/icons/"
 cp "$root"/icons/*.png "$package_dir/"
 

@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Steam Hider",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Adds convenient hide controls to the Steam search page.",
   "permissions": [
     "storage"

@@ -28,7 +28,6 @@ Copy-Item (Join-Path $root "steam.hide.css") $packageDir
 Copy-Item (Join-Path $root "options.html") $packageDir
 Copy-Item (Join-Path $root "options.css") $packageDir
 Copy-Item (Join-Path $root "LICENSE") $packageDir
-Copy-Item (Join-Path $root "readme.md") $packageDir
 Copy-Item (Join-Path $root "icons\*.png") (Join-Path $packageDir "icons")
 Copy-Item (Join-Path $root "icons\*.png") $packageDir
 
